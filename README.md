@@ -1,6 +1,7 @@
 Movies API with Express.js and MySQL
-Project Overview
-This repository hosts a robust RESTful API built with Node.js and the Express.js framework, designed to manage movie data stored in a MySQL database. It provides comprehensive CRUD (Create, Read, Update, Delete) operations for movie records, alongside search functionality and integration with the OMDb API for movie poster retrieval. The project emphasizes clean architecture, secure practices, and maintainable code, showcasing core backend development and API design principles.
+
+Project Overview:
+"This repository hosts a robust RESTful API built with Node.js and the Express.js framework, designed to manage movie data stored in a MySQL database. It provides comprehensive CRUD (Create, Read, Update, Delete) operations for movie records, alongside search functionality and integration with the OMDb API for movie poster retrieval. The project emphasizes clean architecture, secure practices, and maintainable code, showcasing core backend development and API design principles."
 
 This application was developed as part of a university assignment, providing hands-on experience with full-stack development concepts and modern software engineering practices.
 
