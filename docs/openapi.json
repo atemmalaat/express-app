@@ -1,0 +1,898 @@
+{
+  "openapi": "3.0.2",
+  "info": {
+    "title": "Movie API",
+    "description": "A simple API for managing movie data, integrated with a MySQL database using Knex.js. This API allows listing, searching, adding, updating, and deleting movie records, and includes basic user authentication.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local Development Server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Movies",
+      "description": "Operations related to movie data"
+    },
+    {
+      "name": "Users",
+      "description": "User authentication and management"
+    }
+  ],
+  "paths": {
+    "/movies": {
+      "get": {
+        "tags": ["Movies"],
+        "summary": "Get all movies",
+        "description": "Retrieves a list of all movies with basic details. Limited to 100 results per the current implementation.",
+        "responses": {
+          "200": {
+            "description": "A list of movies",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "Error": { "type": "boolean", "example": false },
+                    "Message": { "type": "string", "example": "Success" },
+                    "Movies": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/MovieOverview"
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "success": {
+                    "summary": "Example Movie List",
+                    "value": {
+                      "Error": false,
+                      "Message": "Success",
+                      "Movies": [
+                        {
+                          "tconst": "tt0035423",
+                          "primaryTitle": "Kate & Leopold",
+                          "startYear": "2001",
+                          "titleType": "movie"
+                        },
+                        {
+                          "tconst": "tt0069049",
+                          "primaryTitle": "The Other Side of the Wind",
+                          "startYear": "2018",
+                          "titleType": "movie"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Movies"],
+        "summary": "Add a new movie",
+        "description": "Adds a new movie record to the database. Only 'primaryTitle' and 'startYear' are required. Other fields will be auto-generated or defaulted by the server.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MovieCreateRequest"
+              },
+              "examples": {
+                "minimalNewMovie": {
+                  "summary": "Minimal Example: Title and Year",
+                  "value": {
+                    "primaryTitle": "The Great New Movie",
+                    "startYear": "2025"
+                  }
+                },
+                "fullNewMovie": {
+                  "summary": "Full Example: All Fields Provided",
+                  "value": {
+                    "tconst": "tt9999999",
+                    "titleType": "movie",
+                    "primaryTitle": "A Brand New Film",
+                    "originalTitle": "A Brand New Film",
+                    "isAdult": 0,
+                    "startYear": "2024",
+                    "endYear": "",
+                    "runtimeMinutes": "100",
+                    "genres": "Drama,Thriller"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Movie added successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "integer", "example": 32569367, "description": "The auto-generated ID for the new movie" },
+                    "message": { "type": "string", "example": "Movie added successfully" },
+                    "movie": { "$ref": "#/components/schemas/MovieFullDetails" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Missing required user-input fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": { "type": "string", "example": "Missing required field: primaryTitle" }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - Movie with provided tconst already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": { "type": "string", "example": "Movie with this tconst (tt9999999) already exists. Please provide a unique tconst or omit it for automatic generation." }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/movies/search": {
+      "get": {
+        "tags": ["Movies"],
+        "summary": "Search movies by title",
+        "description": "Searches for movies where the primary title contains the given search term (case-insensitive partial match). Returns up to 50 results.",
+        "parameters": [
+          {
+            "name": "title",
+            "in": "query",
+            "description": "Part of the movie title to search for",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "wind"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of matching movies",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "Error": { "type": "boolean", "example": false },
+                    "Message": { "type": "string", "example": "Success" },
+                    "Movies": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/MovieOverview"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Missing search term",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "Error": { "type": "boolean", "example": true },
+                    "Message": { "type": "string", "example": "Search term \"title\" is required." }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No movies found matching the search",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "Error": { "type": "boolean", "example": false },
+                    "Message": { "type": "string", "example": "No movies found matching your search." },
+                    "Movies": { "type": "array", "items": {}, "example": [] }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/movies/data/{tconst}": {
+      "get": {
+        "tags": ["Movies"],
+        "summary": "Get movie by IMDb ID from local database",
+        "description": "Retrieves a single movie record by its tconst (IMDb ID) from the local MySQL database.",
+        "parameters": [
+          {
+            "name": "tconst",
+            "in": "path",
+            "description": "IMDb ID of the movie to retrieve",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "tt0035423"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Movie details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "Error": { "type": "boolean", "example": false },
+                    "Message": { "type": "string", "example": "Success" },
+                    "Movies": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/MovieFullDetails"
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "singleMovie": {
+                    "summary": "Example Single Movie",
+                    "value": {
+                      "Error": false,
+                      "Message": "Success",
+                      "Movies": [
+                        {
+                          "tconst": "tt0035423",
+                          "titleType": "movie",
+                          "primaryTitle": "Kate & Leopold",
+                          "originalTitle": "Kate & Leopold",
+                          "isAdult": 0,
+                          "startYear": "2001",
+                          "endYear": "",
+                          "runtimeMinutes": "118",
+                          "genres": "Comedy,Fantasy,Romance",
+                          "id": 23041989
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Movie not found in local database",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "Error": { "type": "boolean", "example": true },
+                    "Message": { "type": "string", "example": "Movie with ID tt1234567 not found in local database" }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/movies/poster/{tconst}": {
+      "get": {
+        "tags": ["Movies"],
+        "summary": "Get movie poster details by IMDb ID",
+        "description": "Retrieves movie poster URL, title, and year from OMDb API for a given tconst. Requires the movie to exist in the local database first.",
+        "parameters": [
+          {
+            "name": "tconst",
+            "in": "path",
+            "description": "IMDb ID of the movie to retrieve poster for",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "tt0035423"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Movie poster details fetched successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MoviePosterResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "Example Poster Response",
+                    "value": {
+                      "Error": false,
+                      "Message": "Poster fetched successfully",
+                      "Poster": "https://m.media-amazon.com/images/M/MV5BNjQ2MTE1NjY1OV5BMl5BanBnXkFtZTcwNzYxNzU4NA@@._V1_SX300.jpg",
+                      "Title": "Kate & Leopold",
+                      "Year": "2001"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Movie not found locally or poster not available from OMDb",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "Error": { "type": "boolean", "example": true },
+                    "Message": { "type": "string", "example": "Movie with ID tt1234567 not found in local database" }
+                  }
+                },
+                "examples": {
+                  "localNotFound": {
+                    "summary": "Movie not in local DB",
+                    "value": { "Error": true, "Message": "Movie with ID tt1234567 not found in local database" }
+                  },
+                  "omdbNotFound": {
+                    "summary": "Poster not found on OMDb",
+                    "value": { "Error": true, "Message": "Movie not found!" }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/movies/{tconst}": {
+      "put": {
+        "tags": ["Movies"],
+        "summary": "Update a movie by IMDb ID",
+        "description": "Updates an existing movie record identified by its tconst (IMDb ID). Only provides the fields to be updated.",
+        "parameters": [
+          {
+            "name": "tconst",
+            "in": "path",
+            "description": "IMDb ID of the movie to update",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "tt0035423"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MovieUpdateInput"
+              },
+              "examples": {
+                "updateMovie": {
+                  "summary": "Example Movie Update",
+                  "value": {
+                    "runtimeMinutes": "120",
+                    "genres": "Comedy,Fantasy,Romance,Drama"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Movie updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "Movie updated successfully" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - No update data provided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": { "type": "string", "example": "No update data provided." }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Movie not found or no changes made",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "Movie not found or no changes made" }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Movies"],
+        "summary": "Delete a movie by IMDb ID",
+        "description": "Deletes a movie record identified by its tconst (IMDb ID).",
+        "parameters": [
+          {
+            "name": "tconst",
+            "in": "path",
+            "description": "IMDb ID of the movie to delete",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "tt0035423"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Movie deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "Movie deleted successfully" }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Movie not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "Movie not found" }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/users": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "List all users",
+        "description": "Retrieves a list of all registered users. (Note: In a production app, this would typically be an admin-only route.)",
+        "responses": {
+          "200": {
+            "description": "A list of users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/User"
+                  }
+                },
+                "examples": {
+                  "success": {
+                    "summary": "Example User List",
+                    "value": [
+                      { "id": 1, "email": "user1@example.com" },
+                      { "id": 2, "email": "user2@example.com" }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/users/register": {
+      "post": {
+        "tags": ["Users"],
+        "summary": "Register a new user",
+        "description": "Registers a new user with an email and password.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserRegisterInput"
+              },
+              "examples": {
+                "newUser": {
+                  "summary": "Example New User Registration",
+                  "value": {
+                    "email": "test@example.com",
+                    "password": "password123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User registered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "New User added successfully" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "integer", "example": 3 },
+                        "email": { "type": "string", "example": "test@example.com" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Missing email or password",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Request body incomplete, both email and password are required" }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - User already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": { "type": "string", "example": "User already exists - please user different email." }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/users/login": {
+      "post": {
+        "tags": ["Users"],
+        "summary": "Login a user",
+        "description": "Authenticates a user and issues a JWT token as a cookie.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserLoginInput"
+              },
+              "examples": {
+                "userLogin": {
+                  "summary": "Example User Login",
+                  "value": {
+                    "email": "test@example.com",
+                    "password": "password123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful, JWT token issued",
+            "headers": {
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string",
+                  "example": "token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...; Path=/; Expires=Wed, 03 Jul 2025 00:00:00 GMT; HttpOnly"
+                },
+                "description": "Authentication token set as an HttpOnly cookie"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Missing email or password",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Email and password credentials inccorect or not provided." }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Invalid credentials" }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/profile": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Get user profile",
+        "description": "Retrieves the profile details of the authenticated user. Requires a valid JWT token in the cookie.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User profile details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "Welcome, user@example.com" },
+                    "user": { "$ref": "#/components/schemas/User" }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - No token or invalid token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Unauthorized: No token provided" }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": { "type": "string", "example": "User not found" }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "MovieOverview": {
+        "type": "object",
+        "description": "Basic movie details returned by list and search endpoints. Required fields: tconst, primaryTitle, startYear, titleType.",
+        "properties": {
+          "tconst": { "type": "string", "description": "IMDb ID" },
+          "primaryTitle": { "type": "string", "description": "Primary title of the movie" },
+          "startYear": { "type": "string", "description": "Release year" },
+          "titleType": { "type": "string", "description": "Type of title (e.g., movie, tvSeries)" }
+        },
+        "required": ["tconst", "primaryTitle", "startYear", "titleType"]
+      },
+      "MovieCreateRequest": {
+        "type": "object",
+        "description": "Minimal movie details required for creation (POST) endpoint. Other fields will be auto-generated or defaulted by the server.",
+        "properties": {
+          "primaryTitle": { "type": "string", "description": "The most common title of the movie", "example": "The New Era" },
+          "startYear": { "type": "string", "description": "The release year of the movie", "example": "2025" },
+          "tconst": { "type": "string", "description": "Optional IMDb ID (will be auto-generated if omitted)", "example": "tt1234567" },
+          "titleType": { "type": "string", "description": "Type of title (e.g., movie, tvSeries)", "example": "movie" },
+          "originalTitle": { "type": "string", "description": "The original title (defaults to primaryTitle if omitted)", "example": "The New Era" },
+          "isAdult": { "type": "integer", "format": "int32", "description": "Indicates if the title is adult content (0 for false, 1 for true)", "example": 0 },
+          "endYear": { "type": "string", "description": "End year for TV series (empty for movies)", "example": "" },
+          "runtimeMinutes": { "type": "string", "description": "Primary runtime of the title, in minutes", "example": "90" },
+          "genres": { "type": "string", "description": "Comma-separated list of genres (defaults to 'Unknown' if omitted)", "example": "Action,Adventure" }
+        },
+        "required": ["primaryTitle", "startYear"]
+      },
+      "MovieFullDetails": {
+        "allOf": [
+          { "$ref": "#/components/schemas/MovieCreateRequest" },
+          {
+            "type": "object",
+            "properties": {
+              "id": { "type": "integer", "description": "Auto-incrementing internal database ID", "example": 23041989 }
+            },
+            "required": ["id"]
+          }
+        ],
+        "description": "Complete movie details, including the internal ID, returned by the GET by tconst endpoint"
+      },
+      "MovieUpdateInput": {
+        "type": "object",
+        "description": "Partial movie details for updating (PUT) endpoint. All properties are optional; include only the fields you wish to update.",
+        "properties": {
+          "titleType": { "type": "string", "description": "Type of title", "example": "movie" },
+          "primaryTitle": { "type": "string", "description": "Primary title", "example": "Updated Film Title" },
+          "originalTitle": { "type": "string", "description": "Original title", "example": "Updated Film Title" },
+          "isAdult": { "type": "integer", "format": "int32", "description": "Is it an adult movie? (0 or 1)", "example": 0 },
+          "startYear": { "type": "string", "description": "Release year", "example": "2025" },
+          "endYear": { "type": "string", "description": "End year (for series)", "example": "" },
+          "runtimeMinutes": { "type": "string", "description": "Runtime in minutes", "example": "130" },
+          "genres": { "type": "string", "description": "Comma-separated genres", "example": "Action,Sci-Fi,Fantasy" }
+        }
+      },
+      "MoviePosterResponse": {
+        "type": "object",
+        "description": "Response structure for fetching a movie poster.",
+        "properties": {
+          "Error": { "type": "boolean", "example": false },
+          "Message": { "type": "string", "example": "Poster fetched successfully" },
+          "Poster": { "type": "string", "format": "url", "description": "URL of the movie poster", "example": "https://m.media-amazon.com/images/M/MV5BNjQ2MTE1NjY1OV5BMl5BanBnXkFtZTcwNzYxNzU4NA@@._V1_SX300.jpg" },
+          "Title": { "type": "string", "description": "Title of the movie", "example": "Kate & Leopold" },
+          "Year": { "type": "string", "description": "Year of the movie", "example": "2001" }
+        },
+        "required": ["Error", "Message", "Poster", "Title", "Year"]
+      },
+      "User": {
+        "type": "object",
+        "description": "User profile details",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "email": { "type": "string", "format": "email", "example": "user@example.com" }
+        },
+        "required": ["id", "email"]
+      },
+      "UserRegisterInput": {
+        "type": "object",
+        "description": "Input for user registration",
+        "properties": {
+          "email": { "type": "string", "format": "email", "example": "newuser@example.com" },
+          "password": { "type": "string", "format": "password", "example": "securepassword123" }
+        },
+        "required": ["email", "password"]
+      },
+      "UserLoginInput": {
+        "type": "object",
+        "description": "Input for user login",
+        "properties": {
+          "email": { "type": "string", "format": "email", "example": "user@example.com" },
+          "password": { "type": "string", "format": "password", "example": "password123" }
+        },
+        "required": ["email", "password"]
+      },
+      "AuthResponse": {
+        "type": "object",
+        "description": "Response after successful user login",
+        "properties": {
+          "token": { "type": "string", "description": "JWT token", "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." },
+          "token_type": { "type": "string", "example": "cookie" },
+          "expiry": { "type": "string", "example": "1 Hour" }
+        },
+        "required": ["token", "token_type", "expiry"]
+      }
+    },
+    "securitySchemes": {
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "token",
+        "description": "JWT token stored in an HttpOnly cookie"
+      }
+    },
+    "responses": {
+      "ErrorResponse": {
+        "description": "Internal Server Error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "Error": { "type": "boolean", "example": true },
+                "Message": { "type": "string", "example": "Error in MYSQL query or server failure" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

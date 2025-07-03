@@ -1,0 +1,109 @@
+
+/*Cookie parser way
+module.exports = function(req, res, next) {
+    const token = req.cookies.token;
+
+    if(!token){
+        return res.status(401).json({error: true, message: "No token authentication provided"});
+    }
+
+    try {
+        //very jwt token adn store in variable
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        req.user = decoded; //decoded is the data from the JWT token after verifying it.
+        next();
+    } catch(err) {
+        if(!err.name === 'TokenExpiredError'){
+            return res.status(401).json({error: true, message: "token expired"});
+        }
+    }
+}
+
+// module.exports = function (req, res, next) {
+    // console.log(req.headers);
+    // next();
+// }
+
+
+
+/*  Bearer tokem attempt
+module.exports = function(req, res, next) {
+    if (!("authorization" in req.headers)
+        || !req.headers.authorization.match(/^Bearer /)
+    ) {
+        res.status(401).json({ error: true, message: "Authorization header ('Bearer token') not found" });
+        return;
+    }
+    const token = req.headers.authorization.replace(/^Bearer /, "");
+    try {
+        jwt.verify(token, process.env.JWT_SECRET);
+    } catch (e) {
+        if (e.name === "TokenExpiredError") {
+            res.status(401).json({ error: true, message: "JWT token has expired" });
+        } else {
+            res.status(401).json({ error: true, message: "Invalid JWT token" });
+        }
+        return;
+    }
+    next();
+};
+*/
+
+router.post('/posters/:tconst', async (req, res) => {
+  const { tconst } = req.params;
+  const newPoster = req.body;
+
+  // Validate that tconst is present (URL param)
+  if (!tconst) {
+    return res.status(400).json({ error: 'Missing required field: tconst' });
+  }
+
+  try {
+    // Check if movie already exists
+    const existingMovie = await req.db('basics').where({ tconst }).first();
+
+    if (existingMovie) {
+      return res.status(409).json({ error: 'Movie already exists in database' });
+    }
+
+    // Setup defaults
+    const newMovieData = {
+      tconst,
+      titleType: 'movie',
+      primaryTitle: newPoster.primaryTitle || 'Untitled',
+      originalTitle: newPoster.originalTitle || newPoster.primaryTitle || 'Untitled',
+      isAdult: newPoster.isAdult || 0,
+      startYear: newPoster.startYear || null,
+      endYear: newPoster.endYear || null,
+      runtimeMinutes: newPoster.runtimeMinutes || '0',
+      genres: newPoster.genres || 'Unknown'
+    };
+
+    // Insert into database
+    await req.db('basics').insert(newMovieData);
+
+    res.status(201).json({ message: 'Movie added successfully', data: newMovieData });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/*
+router.post("/login", function (req, res, next) {
+  
+  const expires_in = 60 * 60 * 24; //24hrs - 1Day
+  const exp = Math.floor(Date.now() / 1000) + expires_in;  //Now plus 24hrs
+  const token = jwt.sign({ exp }, process.env.JWT_SECRET);
+  res.json({
+    token_type: "Bearer",  //The Header akk 'Token Type',
+    expires_in, //The Payload aka 'User Id and or Expiry'
+    token //The Signature aka 'Secret Key'
+  });
+});
+
+router.get("/profile", function (req, req, next) {
+  res.send("Hi, you have made it to your profile. Enjoy my movies API");
+  next();
+});
+*/

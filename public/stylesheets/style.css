@@ -1,0 +1,50 @@
+body {
+  padding: 50px;
+  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+}
+
+a {
+  color: #00B7FF;
+}
+
+/* public/stylesheets/style.css (add these styles) */
+
+/* Existing styles from before for .container, input, button, .movie-item, etc. */
+
+.poster-results {
+    display: flex;
+    flex-wrap: wrap; /* Allows multiple posters to wrap */
+    justify-content: center; /* Center posters horizontally */
+    gap: 1.5rem; /* Space between posters */
+    margin-top: 1.5rem;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 1.5rem;
+}
+
+.poster-item {
+    background-color: #f8fafc;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid #e2e8f0;
+    text-align: center;
+    width: 200px; /* Fixed width for each poster container */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+.poster-title {
+    font-weight: 700;
+    color: #334155;
+    margin-bottom: 0.75rem;
+    font-size: 1.125rem; /* text-lg */
+}
+
+.poster-image {
+    max-width: 100%;
+    height: auto; /* Maintain aspect ratio */
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    margin-bottom: 0.5rem;
+    display: block; /* Remove extra space below image */
+    margin-left: auto;
+    margin-right: auto;
+}
